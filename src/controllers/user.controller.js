@@ -4,6 +4,20 @@ import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 
+const generateAccessAndRefreshToken = async (userId) => {
+    try {
+        const user = await User.findById(userId)
+        const accessToken = user.genrateAccessToken()
+        const refreshToken = user.refreshAccessToken()
+
+        user.refreshToken = refreshToken
+        user.save({})
+
+    } catch (error) {
+        throw new ApiError(500, "something went wrong while genrating refresh and access token")
+    }
+}
+
 const registerUser = asyncHandler(async (req, res) => {
     // get user details from frontend
     // validation - not empty
@@ -14,8 +28,6 @@ const registerUser = asyncHandler(async (req, res) => {
     // remove password and refresh token field from response
     // check for user creation
     // return res
-
-
     const { fullname, email, username, password } = req.body
     //console.log("email: ", email);
 
@@ -42,7 +54,6 @@ const registerUser = asyncHandler(async (req, res) => {
         coverImageLocalPath = req.files.coverImage[0].path
     }
 
-
     if (!avatarLocalPath) {
         throw new ApiError(400, "Avatar file is required")
     }
@@ -53,7 +64,6 @@ const registerUser = asyncHandler(async (req, res) => {
     if (!avatar) {
         throw new ApiError(400, "Avatar file is required")
     }
-
 
     const user = await User.create({
         fullname,
@@ -78,6 +88,31 @@ const registerUser = asyncHandler(async (req, res) => {
 
 })
 
+const loginUser = asyncHandler(async (req, res) => {
+    //req body -> data
+    //username or email
+    //find the user
+    //password check
+    //access and refresh token
+    //send cookie
+    const { email, username, password } = req.body
+
+    if (!username || !email) {
+        throw new error(400, "username or email is required")
+    }
+
+    const user = await User.findOne({
+        $or: [{ username }, { email }]
+    })
+
+    if (!user) {
+        throw new error(404, "user does not exist")
+    }
+    const isPasswordValid = await user.isPasswordCorrect(password)
+    if (!isPasswordValid) {
+        throw new error(401, "Invalid user credientials ")
+    }
+})
 
 export {
     registerUser,
